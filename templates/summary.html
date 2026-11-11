@@ -1,0 +1,176 @@
+{% extends "base.html" %}
+{% block title %}Booking Summary – Spice Garden{% endblock %}
+
+{% block content %}
+<div class="page-inner">
+
+  <header class="top-bar">
+    <a href="/" class="top-brand">🪔 Spice Garden</a>
+    <div class="top-user">
+      <span>Namaste, <strong>{{ name }}</strong></span>
+      <a href="/booking" class="btn-ghost-sm">← New Booking</a>
+      <a href="/logout" class="btn-ghost-sm">Logout</a>
+    </div>
+  </header>
+
+  <div class="summary-container">
+    <div class="summary-card">
+
+      <div class="summary-header">
+        <div class="summary-icon">📋</div>
+        <h2>Booking Summary</h2>
+        <p>Review all details before confirming your reservation</p>
+      </div>
+
+      <div class="summary-section-title">Reservation Details</div>
+      <div class="summary-grid">
+        <div class="summary-row">
+          <span class="s-label">🔖 Booking ID</span>
+          <span class="s-value s-id">#{{ booking.booking_id }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="s-label">👤 Name</span>
+          <span class="s-value">{{ booking.booking_name }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="s-label">📧 Contact</span>
+          <span class="s-value">{{ user }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="s-label">📅 Date</span>
+          <span class="s-value">{{ booking.booking_date }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="s-label">⏰ Time</span>
+          <span class="s-value">{{ booking.booking_time }}</span>
+        </div>
+        <div class="summary-row">
+          <span class="s-label">👥 Guests</span>
+          <span class="s-value">{{ booking.table_for }} {{ 'Guest' if booking.table_for == 1 else 'Guests' }}</span>
+        </div>
+      </div>
+
+      {% if menu_data %}
+      <div class="summary-section-title" style="margin-top:1.8rem">Order Details</div>
+      <div class="order-details-table">
+        <div class="odt-header">
+          <span>Dish</span>
+          <span>Category</span>
+          <span>Unit Price</span>
+          <span>Qty</span>
+          <span>Subtotal</span>
+        </div>
+        {% for dish, qty in menu_data.items() %}
+          {% for cat, items in menu_prices.items() %}
+            {% if dish in items %}
+              <div class="odt-row">
+                <span class="odt-dish">{{ dish }}</span>
+                <span class="odt-cat">{{ cat }}</span>
+                <span class="odt-unit">₹{{ items[dish] }}</span>
+                <span class="odt-qty"><span class="qty-badge">× {{ qty }}</span></span>
+                <span class="odt-sub">₹{{ items[dish] * qty }}</span>
+              </div>
+            {% endif %}
+          {% endfor %}
+        {% endfor %}
+        <div class="odt-footer">
+          <span>Total</span>
+          <span></span>
+          <span></span>
+          <span>{{ menu_data.values()|sum }} items</span>
+          <span class="odt-total">₹{{ "%.0f"|format(booking.total_amount) }}</span>
+        </div>
+      </div>
+
+      <div class="category-breakdown">
+        {% for cat, items in menu_prices.items() %}
+          {% set cat_total = namespace(val=0) %}
+          {% set cat_count = namespace(val=0) %}
+          {% for dish, qty in menu_data.items() %}
+            {% if dish in items %}
+              {% set cat_total.val = cat_total.val + items[dish] * qty %}
+              {% set cat_count.val = cat_count.val + 1 %}
+            {% endif %}
+          {% endfor %}
+          {% if cat_count.val > 0 %}
+          <div class="cat-badge">
+            <span class="cat-badge-name">{{ cat }}</span>
+            <span class="cat-badge-amt">₹{{ cat_total.val }}</span>
+          </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+
+      {% else %}
+      <div class="no-menu-note">
+        <span>🍽️</span>
+        <p>No dishes pre-selected. You may order at the restaurant.</p>
+      </div>
+      {% endif %}
+
+      <div class="summary-total">
+        <div class="total-label-group">
+          <span class="total-label">Grand Total</span>
+          {% if menu_data %}<span class="total-items-count">{{ menu_data.values()|sum }} item(s)</span>{% endif %}
+        </div>
+        <span class="total-big">₹{{ "%.0f"|format(booking.total_amount) }}</span>
+      </div>
+
+      <div class="summary-actions-row">
+        <button class="btn-confirm" onclick="confirmBooking()">✓ Confirm Booking</button>
+        <a href="/booking/modify/{{ booking.booking_id }}" class="btn-modify">✏️ Modify</a>
+        <button class="btn-cancel-booking" onclick="openModal('cancelModal')">✕ Cancel</button>
+      </div>
+      <div id="confirmError" class="form-error"></div>
+
+    </div>
+  </div>
+
+  <!-- Cancel Modal -->
+  <div class="modal-overlay" id="cancelModal" onclick="closeOnOverlay(event,'cancelModal')">
+    <div class="modal" style="max-width:420px; text-align:center">
+      <button class="modal-close" onclick="closeModal('cancelModal')">✕</button>
+      <div style="font-size:2.8rem; margin-bottom:1rem">⚠️</div>
+      <h2 style="margin-bottom:.6rem; font-size:1.5rem">Cancel This Booking?</h2>
+      <p style="color:var(--text-muted); margin-bottom:1.5rem; font-size:.9rem; line-height:1.6">
+        You're about to cancel booking <strong style="color:var(--saffron)">#{{ booking.booking_id }}</strong>
+        for <strong style="color:var(--text-main)">{{ booking.booking_name }}</strong> on
+        <strong style="color:var(--text-main)">{{ booking.booking_date }}</strong> at {{ booking.booking_time }}.<br><br>
+        This action <strong style="color:#FF6B6B">cannot be undone</strong>.
+      </p>
+      <div style="display:flex; gap:.8rem; justify-content:center; flex-wrap:wrap">
+        <button class="btn-cancel-confirm" onclick="confirmCancel()">Yes, Cancel Booking</button>
+        <button class="btn-ghost" onclick="closeModal('cancelModal')">Keep My Booking</button>
+      </div>
+      <div id="cancelError" class="form-error" style="margin-top:.8rem"></div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function confirmBooking() {
+  const btn = document.querySelector('.btn-confirm');
+  btn.textContent = 'Confirming...'; btn.disabled = true;
+  try {
+    const res = await fetch('/booking/confirm/{{ booking.booking_id }}', { method:'POST' });
+    const data = await res.json();
+    if (data.success) { showToast('Booking confirmed! 🎉'); setTimeout(() => location.href = data.redirect, 800); }
+    else { document.getElementById('confirmError').textContent = data.error; btn.textContent = '✓ Confirm Booking'; btn.disabled = false; }
+  } catch(ex) { document.getElementById('confirmError').textContent = 'Error. Please try again.'; btn.textContent = '✓ Confirm Booking'; btn.disabled = false; }
+}
+
+async function confirmCancel() {
+  const btn = document.querySelector('.btn-cancel-confirm');
+  btn.textContent = 'Cancelling...'; btn.disabled = true;
+  try {
+    const res = await fetch('/booking/cancel/{{ booking.booking_id }}', { method:'POST' });
+    const data = await res.json();
+    if (data.success) { showToast('Booking cancelled.'); setTimeout(() => location.href = '/booking', 1000); }
+    else { document.getElementById('cancelError').textContent = data.error; btn.textContent = 'Yes, Cancel Booking'; btn.disabled = false; }
+  } catch(ex) { document.getElementById('cancelError').textContent = 'Error. Try again.'; btn.textContent = 'Yes, Cancel Booking'; btn.disabled = false; }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block title %}Booking Confirmed – Spice Garden{% endblock %}
+
+{% block content %}
+<div class="page-inner">
+
+  <header class="top-bar">
+    <a href="/" class="top-brand">🪔 Spice Garden</a>
+    <div class="top-user">
+      <span>Namaste, <strong>{{ name }}</strong></span>
+      <a href="/logout" class="btn-ghost-sm">Logout</a>
+    </div>
+  </header>
+
+  <div class="confirmation-container">
+    <div class="confirmation-card">
+
+      <div class="confetti-ring">
+        <div class="confetti-icon">🎉</div>
+      </div>
+
+      <h2 class="confirm-title">Booking Confirmed!</h2>
+      <p class="confirm-subtitle">
+        {% if '@' in user %}
+          Booking confirmation details have been sent to <strong>{{ user }}</strong>
+        {% else %}
+          Your table has been successfully reserved. Thank you for choosing Spice Garden!
+        {% endif %}
+      </p>
+
+      <div class="confirm-details">
+        <div class="cd-row"><span>📋 Booking ID</span><strong>#{{ booking.booking_id }}</strong></div>
+        <div class="cd-row"><span>👤 Name</span><strong>{{ booking.booking_name }}</strong></div>
+        <div class="cd-row"><span>📅 Date</span><strong>{{ booking.booking_date }}</strong></div>
+        <div class="cd-row"><span>⏰ Time</span><strong>{{ booking.booking_time }}</strong></div>
+        <div class="cd-row"><span>👥 Guests</span><strong>{{ booking.table_for }}</strong></div>
+        {% if booking.total_amount %}
+        <div class="cd-row"><span>💰 Total</span><strong>₹{{ "%.0f"|format(booking.total_amount) }}</strong></div>
+        {% endif %}
+      </div>
+
+      {% if menu_data %}
+      <div class="confirm-menu">
+        <h4>Your Order</h4>
+        <p>{{ menu_data.keys()|list|join(', ') }}</p>
+      </div>
+      {% endif %}
+
+      <div class="confirm-msg">
+        <p>🙏 <em>We look forward to welcoming you to Spice Garden. Our team will ensure an unforgettable dining experience.</em></p>
+      </div>
+
+      <div class="confirm-actions">
+        <a href="/booking" class="btn-primary">Book Again 🍛</a>
+        <a href="/logout" class="btn-ghost">Logout</a>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+  const icon = document.querySelector('.confetti-icon');
+  setTimeout(() => icon.style.transform = 'scale(1.2) rotate(10deg)', 100);
+  setTimeout(() => icon.style.transform = 'scale(1) rotate(0deg)', 400);
+});
+</script>
+{% endblock %}

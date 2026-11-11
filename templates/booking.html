@@ -1,0 +1,240 @@
+{% extends "base.html" %}
+{% block title %}{% if edit_booking %}Modify Booking{% else %}Book a Table{% endif %} – Spice Garden{% endblock %}
+
+{% block content %}
+<div class="page-inner">
+
+  <header class="top-bar">
+    <a href="/" class="top-brand">🪔 Spice Garden</a>
+    <div class="top-user">
+      <span>Namaste, <strong>{{ name }}</strong></span>
+      <a href="/" class="btn-ghost-sm">Home</a>
+      <a href="/logout" class="btn-ghost-sm">Logout</a>
+    </div>
+  </header>
+
+  <div class="two-col-layout">
+
+    <!-- Left: Past Bookings -->
+    <aside class="sidebar-left">
+      <h3 class="sidebar-title">Your Bookings</h3>
+      {% if past_bookings %}
+        <div class="booking-history">
+          {% for b in past_bookings %}
+          <div class="booking-card-mini {% if edit_booking and edit_booking.booking_id == b.booking_id %}bm-active{% endif %}">
+            <div class="bm-header">
+              <span class="bm-name">{{ b.booking_name }}</span>
+              <span class="bm-guests">{{ b.table_for }} pax</span>
+            </div>
+            <div class="bm-detail">📅 {{ b.booking_date }}</div>
+            <div class="bm-detail">⏰ {{ b.booking_time }}</div>
+            {% if b.total_amount %}
+            <div class="bm-amount">₹{{ "%.0f"|format(b.total_amount) }}</div>
+            {% endif %}
+            <div class="bm-actions">
+              <a href="/booking/modify/{{ b.booking_id }}" class="bm-btn bm-btn-edit">✏️ Edit</a>
+              <button class="bm-btn bm-btn-del" onclick="quickCancel({{ b.booking_id }}, '{{ b.booking_name }}')">✕ Cancel</button>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      {% else %}
+        <div class="empty-state-small">
+          <p>No bookings yet.<br>Make your first reservation!</p>
+        </div>
+      {% endif %}
+    </aside>
+
+    <!-- Right: Booking Form -->
+    <section class="booking-section">
+      <div class="section-header">
+        {% if edit_booking %}
+        <div class="edit-mode-badge">✏️ Editing Booking #{{ edit_booking.booking_id }}</div>
+        <h2>Modify Reservation</h2>
+        <p>Update the details below and proceed to confirm</p>
+        {% else %}
+        <h2>Reserve Your Table</h2>
+        <p>Fill in the details below to secure your spot</p>
+        {% endif %}
+      </div>
+
+      <form id="bookingForm" class="booking-form">
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Booking Name</label>
+            <input type="text" name="booking_name"
+              value="{{ edit_booking.booking_name if edit_booking else name }}"
+              placeholder="Name for reservation" required/>
+          </div>
+          <div class="form-group">
+            <label>Number of Guests</label>
+            <select name="table_for" required>
+              {% for i in range(1, 13) %}
+              <option value="{{ i }}" {% if edit_booking and edit_booking.table_for == i %}selected{% endif %}>
+                {{ i }} {{ 'Guest' if i==1 else 'Guests' }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Date</label>
+            <input type="date" name="booking_date"
+              value="{{ edit_booking.booking_date if edit_booking else '' }}"
+              min="{{ min_date }}" max="{{ max_date }}" required/>
+          </div>
+          <div class="form-group">
+            <label>Time Slot</label>
+            <select name="booking_time" required>
+              <option value="">Select time...</option>
+              {% for slot in time_slots %}
+              <option value="{{ slot }}" {% if edit_booking and edit_booking.booking_time == slot %}selected{% endif %}>
+                {{ slot }}
+              </option>
+              {% endfor %}
+            </select>
+          </div>
+        </div>
+
+        <!-- Menu Selection -->
+        <div class="menu-selection">
+          <h3 class="menu-sel-title">Select Dishes <span>(optional)</span></h3>
+          {% for category, items in menu.items() %}
+          <div class="menu-cat-block">
+            <h4 class="cat-label">{{ category }}</h4>
+            <div class="dish-grid">
+              {% for dish, price in items.items() %}
+              {% set dish_key = dish|replace(' ','_') %}
+              <div class="dish-selector">
+                <div class="dish-info">
+                  <span class="dish-n">{{ dish }}</span>
+                  <span class="dish-p">₹{{ price }}</span>
+                </div>
+                <div class="qty-control">
+                  <button type="button" class="qty-btn" onclick="changeQty('{{ dish_key }}', -1)">−</button>
+                  <input type="number" id="qty_{{ dish_key }}"
+                         data-dish="{{ dish }}" data-price="{{ price }}"
+                         value="{% if edit_booking and edit_menu and dish in edit_menu %}{{ edit_menu[dish] }}{% else %}0{% endif %}"
+                         min="0" max="20" class="qty-input" readonly/>
+                  <button type="button" class="qty-btn" onclick="changeQty('{{ dish_key }}', 1)">+</button>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+
+        <div class="order-total-bar">
+          <span>Estimated Total</span>
+          <span class="total-amount" id="totalAmount">₹0</span>
+        </div>
+
+        <input type="hidden" name="menu_json" id="menuJson" value="{}"/>
+        <input type="hidden" name="total_amount" id="totalHidden" value="0"/>
+
+        <div id="bookingError" class="form-error"></div>
+        <button type="submit" class="btn-form-large">
+          {% if edit_booking %}Update & Review Summary →{% else %}Proceed to Summary →{% endif %}
+        </button>
+      </form>
+    </section>
+  </div>
+</div>
+
+<!-- Quick Cancel Modal -->
+<div class="modal-overlay" id="quickCancelModal" onclick="closeOnOverlay(event,'quickCancelModal')">
+  <div class="modal" style="max-width:400px; text-align:center">
+    <button class="modal-close" onclick="closeModal('quickCancelModal')">✕</button>
+    <div style="font-size:2.5rem; margin-bottom:1rem">⚠️</div>
+    <h2 style="margin-bottom:.5rem; font-size:1.4rem">Cancel Booking?</h2>
+    <p id="cancelModalText" style="color:var(--text-muted); margin-bottom:1.5rem; font-size:.9rem; line-height:1.6"></p>
+    <div style="display:flex; gap:.8rem; justify-content:center">
+      <button class="btn-cancel-confirm" id="cancelConfirmBtn" onclick="doQuickCancel()">Yes, Cancel</button>
+      <button class="btn-ghost" onclick="closeModal('quickCancelModal')">Keep It</button>
+    </div>
+    <div id="quickCancelError" class="form-error" style="margin-top:.8rem"></div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+let menuSelections = {};
+let cancelTargetId = null;
+
+{% if edit_booking and edit_menu %}
+  menuSelections = {{ edit_menu | tojson }};
+{% endif %}
+
+function changeQty(dishKey, delta) {
+  const input = document.getElementById('qty_' + dishKey);
+  let val = parseInt(input.value) + delta;
+  if (val < 0) val = 0;
+  if (val > 20) val = 20;
+  input.value = val;
+  const dish = input.dataset.dish;
+  if (val > 0) menuSelections[dish] = val;
+  else delete menuSelections[dish];
+  updateTotal();
+}
+
+function updateTotal() {
+  let total = 0;
+  document.querySelectorAll('.qty-input').forEach(inp => {
+    const qty = parseInt(inp.value);
+    if (qty > 0) total += qty * parseInt(inp.dataset.price);
+  });
+  document.getElementById('totalAmount').textContent = '₹' + total;
+  document.getElementById('totalHidden').value = total;
+  document.getElementById('menuJson').value = JSON.stringify(menuSelections);
+}
+
+updateTotal();
+
+const SUBMIT_URL = {% if edit_booking %}'/booking/modify/{{ edit_booking.booking_id }}'{% else %}'/booking/submit'{% endif %};
+
+document.getElementById('bookingForm').onsubmit = async function(e) {
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const err = document.getElementById('bookingError');
+  err.textContent = '';
+  const btn = e.target.querySelector('button[type=submit]');
+  btn.textContent = 'Processing...'; btn.disabled = true;
+  try {
+    const res = await fetch(SUBMIT_URL, { method:'POST', body: fd });
+    const data = await res.json();
+    if (data.success) { showToast('{% if edit_booking %}Booking updated!{% else %}Booking created!{% endif %}'); setTimeout(()=>location.href=data.redirect, 600); }
+    else { err.textContent = data.error; btn.textContent = '{% if edit_booking %}Update & Review Summary →{% else %}Proceed to Summary →{% endif %}'; btn.disabled = false; }
+  } catch(ex) { err.textContent = 'Error submitting. Try again.'; btn.textContent = '{% if edit_booking %}Update & Review Summary →{% else %}Proceed to Summary →{% endif %}'; btn.disabled = false; }
+};
+
+{% if not edit_booking %}
+const dateInput = document.querySelector('input[name=booking_date]');
+if (dateInput && !dateInput.value) dateInput.value = new Date().toISOString().split('T')[0];
+{% endif %}
+
+function quickCancel(bookingId, bookingName) {
+  cancelTargetId = bookingId;
+  document.getElementById('cancelModalText').innerHTML =
+    `You're about to cancel the booking for <strong style="color:var(--text-main)">${bookingName}</strong>.<br>This cannot be undone.`;
+  document.getElementById('quickCancelError').textContent = '';
+  openModal('quickCancelModal');
+}
+
+async function doQuickCancel() {
+  const btn = document.getElementById('cancelConfirmBtn');
+  btn.textContent = 'Cancelling...'; btn.disabled = true;
+  try {
+    const res = await fetch(`/booking/cancel/${cancelTargetId}`, { method:'POST' });
+    const data = await res.json();
+    if (data.success) { showToast('Booking cancelled.'); setTimeout(() => location.reload(), 900); }
+    else { document.getElementById('quickCancelError').textContent = data.error; btn.textContent = 'Yes, Cancel'; btn.disabled = false; }
+  } catch(ex) { document.getElementById('quickCancelError').textContent = 'Error. Try again.'; btn.textContent = 'Yes, Cancel'; btn.disabled = false; }
+}
+</script>
+{% endblock %}

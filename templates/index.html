@@ -1,0 +1,252 @@
+{% extends "base.html" %}
+{% block title %}Spice Garden – Authentic Indian Cuisine{% endblock %}
+
+{% block content %}
+<div class="page-home">
+
+  <!-- Left Sidebar Navigation -->
+  <nav class="side-nav">
+    <div class="nav-brand">
+      <span class="nav-icon">🪔</span>
+    </div>
+    <div class="nav-links">
+      <button class="nav-btn" onclick="openModal('registerModal')">
+        <span class="nav-btn-icon">✦</span>
+        <span>Register</span>
+      </button>
+      <button class="nav-btn" onclick="openModal('loginModal')">
+        <span class="nav-btn-icon">◈</span>
+        <span>Login</span>
+      </button>
+      <button class="nav-btn" onclick="openModal('menuModal')">
+        <span class="nav-btn-icon">◆</span>
+        <span>Menu</span>
+      </button>
+      <button class="nav-btn" onclick="openModal('reviewsModal')">
+        <span class="nav-btn-icon">◇</span>
+        <span>Reviews</span>
+      </button>
+    </div>
+    {% if user %}
+    <div class="nav-user">
+      <span class="user-greeting">Namaste,</span>
+      <span class="user-name">{{ name }}</span>
+      <a href="/booking" class="btn-cta-small">Book Table</a>
+      <a href="/logout" class="btn-logout-small">Logout</a>
+    </div>
+    {% endif %}
+  </nav>
+
+  <!-- Hero Section -->
+  <main class="hero">
+    <div class="hero-content">
+      <p class="hero-tagline">Authentic · Traditional · Royal</p>
+      <h1 class="hero-title">
+        <span class="title-line-1">Spice</span>
+        <span class="title-line-2">Garden</span>
+      </h1>
+      <p class="hero-subtitle">Savour the symphony of spices<br>curated from royal kitchens of India</p>
+      <div class="hero-actions">
+        {% if user %}
+          <a href="/booking" class="btn-primary">Reserve Your Table</a>
+        {% else %}
+          <button class="btn-primary" onclick="openModal('registerModal')">Reserve Your Table</button>
+          <button class="btn-secondary" onclick="openModal('menuModal')">Explore Menu</button>
+        {% endif %}
+      </div>
+    </div>
+    <div class="hero-deco">
+      <div class="mandala-ring ring-1"></div>
+      <div class="mandala-ring ring-2"></div>
+      <div class="mandala-ring ring-3"></div>
+      <div class="center-emblem">🪷</div>
+    </div>
+  </main>
+
+</div>
+
+<!-- ═══════════ REGISTER MODAL ═══════════ -->
+<div class="modal-overlay" id="registerModal" onclick="closeOnOverlay(event,'registerModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('registerModal')">✕</button>
+    <div class="modal-header">
+      <span class="modal-icon">✦</span>
+      <h2>Create Account</h2>
+      <p>Join us and experience royal hospitality</p>
+    </div>
+    <form id="registerForm" class="modal-form" onsubmit="submitRegister(event)">
+      <div class="form-group">
+        <label>Email or Phone Number</label>
+        <input type="text" name="login_id" placeholder="e.g. ankit@email.com or 9876543210" required/>
+      </div>
+      <div class="form-group">
+        <label>Full Name</label>
+        <input type="text" name="customer_name" placeholder="Your full name" required/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="Minimum 6 characters" required/>
+      </div>
+      <div class="form-group">
+        <label>Confirm Password</label>
+        <input type="password" name="confirm_password" placeholder="Repeat your password" required/>
+      </div>
+      <div id="registerError" class="form-error"></div>
+      <button type="submit" class="btn-form">Register →</button>
+      <p class="form-switch">Already have an account? <a href="#" onclick="switchModal('registerModal','loginModal')">Login here</a></p>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════ LOGIN MODAL ═══════════ -->
+<div class="modal-overlay" id="loginModal" onclick="closeOnOverlay(event,'loginModal')">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('loginModal')">✕</button>
+    <div class="modal-header">
+      <span class="modal-icon">◈</span>
+      <h2>Welcome Back</h2>
+      <p>Sign in to manage your bookings</p>
+    </div>
+    <form id="loginForm" class="modal-form" onsubmit="submitLogin(event)">
+      <div class="form-group">
+        <label>Email or Phone Number</label>
+        <input type="text" name="login_id" placeholder="Your registered email or phone" required/>
+      </div>
+      <div class="form-group">
+        <label>Password</label>
+        <input type="password" name="password" placeholder="Your password" required/>
+      </div>
+      <div id="loginError" class="form-error"></div>
+      <button type="submit" class="btn-form">Login →</button>
+      <p class="form-switch">New here? <a href="#" onclick="switchModal('loginModal','registerModal')">Create an account</a></p>
+    </form>
+  </div>
+</div>
+
+<!-- ═══════════ MENU MODAL ═══════════ -->
+<div class="modal-overlay" id="menuModal" onclick="closeOnOverlay(event,'menuModal')">
+  <div class="modal modal-wide">
+    <button class="modal-close" onclick="closeModal('menuModal')">✕</button>
+    <div class="modal-header">
+      <span class="modal-icon">◆</span>
+      <h2>Our Menu</h2>
+      <p>Indian Cuisine – Crafted with love & tradition</p>
+    </div>
+    <div class="menu-grid">
+      {% for category, items in menu.items() %}
+      <div class="menu-category">
+        <h3 class="menu-cat-title">{{ category }}</h3>
+        {% for dish, price in items.items() %}
+        <div class="menu-item">
+          <span class="dish-name">{{ dish }}</span>
+          <span class="dish-price">₹{{ price }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+    <div class="modal-footer">
+      {% if user %}
+        <a href="/booking" class="btn-primary" onclick="closeModal('menuModal')">Book a Table</a>
+      {% else %}
+        <button class="btn-primary" onclick="switchModal('menuModal','registerModal')">Book a Table</button>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════ REVIEWS MODAL ═══════════ -->
+<div class="modal-overlay" id="reviewsModal" onclick="closeOnOverlay(event,'reviewsModal')">
+  <div class="modal modal-wide">
+    <button class="modal-close" onclick="closeModal('reviewsModal')">✕</button>
+    <div class="modal-header">
+      <span class="modal-icon">◇</span>
+      <h2>Guest Reviews</h2>
+      <p>What our guests say about us</p>
+    </div>
+    <div class="reviews-list">
+      {% if reviews %}
+        {% for r in reviews %}
+        <div class="review-card">
+          <div class="review-meta">
+            <span class="reviewer-name">{{ r.booking_name }}</span>
+            <span class="review-date">{{ r.created_at[:10] }}</span>
+          </div>
+          <p class="review-text">{{ r.user_reviews }}</p>
+        </div>
+        {% endfor %}
+      {% else %}
+        <div class="empty-state">
+          <span>🍽️</span>
+          <p>No reviews yet. Be the first to share your experience!</p>
+        </div>
+      {% endif %}
+    </div>
+    {% if user %}
+    <div class="add-review-section">
+      <h3>Share Your Experience</h3>
+      <textarea id="reviewText" placeholder="Tell us about your dining experience... (up to 500 words)" maxlength="3000" rows="4"></textarea>
+      <button class="btn-primary" onclick="submitReview()">Add Review →</button>
+    </div>
+    {% else %}
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="switchModal('reviewsModal','loginModal')">Login to Add Review</button>
+    </div>
+    {% endif %}
+    <div class="modal-footer" style="margin-top:1rem">
+      {% if user %}
+        <a href="/booking" class="btn-primary">Book a Table</a>
+        <a href="/logout" class="btn-ghost">Logout</a>
+      {% endif %}
+    </div>
+  </div>
+</div>
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+async function submitRegister(e) {
+  e.preventDefault();
+  const form = document.getElementById('registerForm');
+  const fd = new FormData(form);
+  const err = document.getElementById('registerError');
+  err.textContent = '';
+  const btn = form.querySelector('button[type=submit]');
+  btn.textContent = 'Registering...'; btn.disabled = true;
+  try {
+    const res = await fetch('/register', { method:'POST', body: fd });
+    const data = await res.json();
+    if (data.success) { showToast('Welcome! Redirecting...'); setTimeout(()=>location.href=data.redirect,800); }
+    else { err.textContent = data.error; btn.textContent = 'Register →'; btn.disabled = false; }
+  } catch(ex) { err.textContent = 'Network error. Try again.'; btn.textContent = 'Register →'; btn.disabled = false; }
+}
+
+async function submitLogin(e) {
+  e.preventDefault();
+  const form = document.getElementById('loginForm');
+  const fd = new FormData(form);
+  const err = document.getElementById('loginError');
+  err.textContent = '';
+  const btn = form.querySelector('button[type=submit]');
+  btn.textContent = 'Logging in...'; btn.disabled = true;
+  try {
+    const res = await fetch('/login', { method:'POST', body: fd });
+    const data = await res.json();
+    if (data.success) { showToast('Welcome back!'); setTimeout(()=>location.href=data.redirect,800); }
+    else { err.textContent = data.error; btn.textContent = 'Login →'; btn.disabled = false; }
+  } catch(ex) { err.textContent = 'Network error. Try again.'; btn.textContent = 'Login →'; btn.disabled = false; }
+}
+
+async function submitReview() {
+  const text = document.getElementById('reviewText').value.trim();
+  if (!text) { showToast('Please write your review first'); return; }
+  const fd = new FormData();
+  fd.append('review_text', text);
+  const res = await fetch('/add-review', { method:'POST', body: fd });
+  const data = await res.json();
+  if (data.success) { showToast('Review added! Thank you 🙏'); document.getElementById('reviewText').value=''; setTimeout(()=>location.reload(),1500); }
+  else showToast('Error adding review');
+}
+</script>
+{% endblock %}
